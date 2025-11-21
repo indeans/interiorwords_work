@@ -41,12 +41,8 @@
             padding-right: 1rem;
         }
         .expanded .content {
-            max-height: 1000px; /* 추가 콘텐츠를 위해 높이 확장 */
-            transition: max-height 0.7s ease-in-out;
-        }
-        .llm-output {
-            background-color: #ecfdf5; /* Light green for output */
-            border-left: 4px solid #059669;
+            max-height: 500px; /* 불필요한 확장 제거 후 높이 재조정 */
+            transition: max-height 0.5s ease-in;
         }
     </style>
 </head>
@@ -84,73 +80,8 @@
     </div>
 
     <script>
-        // 상수 설정
-        const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=";
-        const apiKey = ""; 
-
-        // 유틸리티 함수: 지수 백오프를 이용한 API 호출
-        async function fetchWithRetry(url, options, maxRetries = 5) {
-            for (let i = 0; i < maxRetries; i++) {
-                try {
-                    const response = await fetch(url, options);
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.json();
-                } catch (error) {
-                    if (i === maxRetries - 1) {
-                        console.error("API call failed after all retries:", error);
-                        throw new Error("API 호출에 실패했습니다. 잠시 후 다시 시도해 주세요.");
-                    }
-                    const delay = Math.pow(2, i) * 1000;
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                }
-            }
-        }
-
-        // 함수: Gemini API 호출 (핵심 LLM 기능)
-        async function callGeminiAPI(query, outputElementId) {
-            const outputElement = document.getElementById(outputElementId);
-            outputElement.innerHTML = `
-                <div class="flex items-center text-green-700 space-x-2">
-                    <svg class="animate-spin h-5 w-5 text-green-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <span>Gemini가 답변을 생성하는 중...</span>
-                </div>
-            `;
-            outputElement.classList.remove('hidden');
-
-            const payload = {
-                contents: [{ parts: [{ text: query }] }],
-                systemInstruction: {
-                    parts: [{ text: "당신은 건축 및 인테리어 시공 교육 전문가입니다. 답변은 학생이 이해하기 쉽고 친절한 한국어 문장으로 작성하세요. 마크다운 형식으로 응답하며, 장황한 설명 없이 핵심 내용을 간결하게 구성합니다." }]
-                },
-            };
-
-            const options = {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            };
-
-            try {
-                const result = await fetchWithRetry(API_URL + apiKey, options);
-                const text = result.candidates?.[0]?.content?.parts?.[0]?.text || "답변을 생성하지 못했습니다. 다시 시도해 주세요.";
-                
-                // 마크다운을 간단한 HTML로 변환하여 표시 (줄바꿈 처리)
-                const formattedText = text
-                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold
-                    .replace(/\n/g, '<br>'); // Newlines
-
-                outputElement.innerHTML = `<p class="llm-output p-4 rounded-lg">${formattedText}</p>`;
-            } catch (error) {
-                console.error("API 호출 중 오류 발생:", error);
-                outputElement.innerHTML = `<p class="text-red-600 p-4">⚠️ 오류: ${error.message}</p>`;
-            }
-        }
-
+        // LLM 관련 상수와 함수 (API_URL, apiKey, fetchWithRetry, callGeminiAPI)는 모두 제거되었습니다.
+        
         // 용어 데이터 (JSON 형태)
         const termsData = [
             // --- 시공 용어 (Official Terms) ---
@@ -304,51 +235,7 @@
             const tagClass = item.type === 'official' ? 'official-tag' : 'slang-tag';
             const typeLabel = item.type === 'official' ? '표준 용어' : '현장 은어';
             
-            // 각 용어별로 고유한 ID 생성
-            const uniqueId = item.term.replace(/[^a-zA-Z0-9]/g, '_');
-            const outputElementId = `llm-output-${uniqueId}`;
-
-            let detailFeaturesHtml = '';
-            
-            if (item.type === 'official') {
-                // 표준 용어: 개념 시뮬레이션 버튼
-                const encodedTerm = encodeURIComponent(item.term + ' 인테리어 용어');
-                const searchUrl = `https://www.google.com/search?q=${encodedTerm}`;
-                const simulationQuery = `인테리어 시공 용어 "${item.term}"에 대해, 현장에서 작업자들(반장님, 기사)이 대화하는 형태의 가상 시뮬레이션 대본(5문장 내외)을 작성해 줘.`;
-                
-                detailFeaturesHtml = `
-                    <div class="mt-4 pt-3 border-t border-indigo-100 flex flex-col sm:flex-row gap-2">
-                        <!-- 검색 버튼 -->
-                        <a href="${searchUrl}" target="_blank" rel="noopener noreferrer" 
-                           class="flex-1 inline-flex justify-center items-center text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 
-                                  px-4 py-2 rounded-lg shadow transition duration-150">
-                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                            </svg>
-                            자세히 검색하기
-                        </a>
-                        <!-- Gemini 시뮬레이션 버튼 -->
-                        <button onclick="callGeminiAPI('${simulationQuery}', '${outputElementId}')"
-                                class="flex-1 inline-flex justify-center items-center text-sm font-medium text-white bg-green-600 hover:bg-green-700 
-                                       px-4 py-2 rounded-lg shadow transition duration-150">
-                            ✨ 현장 시뮬레이션 요청
-                        </button>
-                    </div>
-                `;
-            } else {
-                // 현장 은어: 순화어 제안 버튼
-                const purificationQuery = `인테리어 현장 은어인 "${item.term}"에 대해, 이 용어를 대체할 수 있는 가장 적절한 표준 순화어와 그 순화어를 사용해야 하는 이유를 간결하게 설명해 줘.`;
-                
-                detailFeaturesHtml = `
-                    <div class="mt-4 pt-3 border-t border-amber-100">
-                        <button onclick="callGeminiAPI('${purificationQuery}', '${outputElementId}')"
-                                class="w-full inline-flex justify-center items-center text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 
-                                       px-4 py-2 rounded-lg shadow transition duration-150">
-                            ✨ 순화어 제안 받기
-                        </button>
-                    </div>
-                `;
-            }
+            // 모든 추가 기능(검색 링크, LLM 버튼) 관련 로직을 제거했습니다.
 
             card.className = `term-card ${typeClass} bg-white rounded-xl shadow-lg p-0 cursor-pointer overflow-hidden`;
             card.setAttribute('data-term', item.term);
@@ -379,13 +266,6 @@
                         <p class="text-gray-600 italic bg-gray-50 p-3 rounded-lg border border-gray-100">
                             <span class="font-semibold text-red-600">💬 예시:</span> ${item.example}
                         </p>
-                        
-                        ${detailFeaturesHtml} <!-- 기능 버튼 삽입 -->
-                        
-                        <!-- LLM 출력 영역 -->
-                        <div id="${outputElementId}" class="mt-4 hidden text-sm">
-                            <!-- LLM 결과가 여기에 표시됩니다. -->
-                        </div>
                     </div>
                 </div>
             `;
