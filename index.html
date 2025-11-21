@@ -44,6 +44,10 @@
             max-height: 500px; /* 불필요한 확장 제거 후 높이 재조정 */
             transition: max-height 0.5s ease-in;
         }
+        /* 필터 버튼 기본 스타일: 캡슐 모양 적용 */
+        .filter-btn {
+            @apply px-6 py-2 rounded-full font-semibold transition duration-150 border cursor-pointer;
+        }
     </style>
 </head>
 <body class="p-4 sm:p-8">
@@ -64,6 +68,19 @@
         <div class="mb-6">
             <input type="text" id="search-input" placeholder="궁금한 용어를 검색해 보세요 (예: 야리끼리, 마감)"
                    class="w-full p-4 border-2 border-indigo-200 rounded-xl focus:ring-4 focus:ring-indigo-300 focus:border-indigo-500 text-gray-700 shadow-inner transition duration-150">
+        </div>
+
+        <!-- 필터 버튼 -->
+        <div id="filter-buttons" class="flex justify-center space-x-3 mb-6">
+            <button id="filter-all" class="filter-btn">
+                전체 보기
+            </button>
+            <button id="filter-official" data-filter="official" class="filter-btn">
+                표준 용어
+            </button>
+            <button id="filter-slang" data-filter="slang" class="filter-btn">
+                현장 은어
+            </button>
         </div>
 
         <!-- 용어 목록 컨테이너 -->
@@ -414,6 +431,45 @@
         const glossaryList = document.getElementById('glossary-list');
         const searchInput = document.getElementById('search-input');
         const noResults = document.getElementById('no-results');
+        const filterButtonsContainer = document.getElementById('filter-buttons');
+        const allBtn = document.getElementById('filter-all');
+        const officialBtn = document.getElementById('filter-official');
+        const slangBtn = document.getElementById('filter-slang');
+
+        let currentFilter = 'all'; // 'all', 'official', 'slang'
+
+        // 함수: 활성 필터 버튼 스타일 업데이트 (디자인 개선)
+        function updateFilterButtons(activeFilter) {
+            const allButtons = [allBtn, officialBtn, slangBtn];
+            
+            allButtons.forEach(btn => {
+                const isActive = (btn.id === 'filter-all' && activeFilter === 'all') || 
+                                 (btn.dataset.filter === activeFilter);
+                
+                // Reset to base class
+                btn.className = 'filter-btn';
+                
+                if (isActive) {
+                    // Active (Indigo theme, prominent shadow) Style
+                    btn.classList.add('bg-indigo-600', 'text-white', 'shadow-lg', 'border-transparent', 'hover:bg-indigo-700');
+                } else {
+                    // Inactive (White background, subtle shadow) Style
+                    btn.classList.add('bg-white', 'shadow-sm');
+
+                    if (btn.id === 'filter-all') {
+                        // All button inactive (Gray style)
+                        btn.classList.add('text-gray-600', 'border-gray-300', 'hover:bg-gray-50');
+                    } else if (btn.id === 'filter-official') {
+                        // Official button inactive (Blue style)
+                        btn.classList.add('border-blue-500', 'text-blue-600', 'hover:bg-blue-50');
+                    } else if (btn.id === 'filter-slang') {
+                        // Slang button inactive (Amber style)
+                        btn.classList.add('border-amber-500', 'text-amber-600', 'hover:bg-amber-50');
+                    }
+                }
+            });
+        }
+
 
         // 함수: 용어 카드를 HTML로 생성
         function createTermCard(item) {
@@ -458,23 +514,31 @@
             return card;
         }
 
-        // 함수: 용어 목록을 렌더링 (검색 필터링 포함)
-        function renderGlossary(filterText = '') {
+        // 함수: 용어 목록을 렌더링 (검색 필터링 및 타입 필터링 포함)
+        function renderGlossary(filterText = '', typeFilter = currentFilter) {
             glossaryList.innerHTML = '';
             const lowerCaseFilter = filterText.toLowerCase().trim();
             let hasResults = false;
+
+            // 필터 버튼 스타일 업데이트
+            updateFilterButtons(typeFilter);
 
             termsData.forEach(item => {
                 const termLower = item.term.toLowerCase();
                 const definitionLower = item.definition.toLowerCase();
                 const categoryLower = item.category.toLowerCase();
-
-                // 검색 필터링: 용어, 정의, 카테고리에 포함되는지 확인
-                if (lowerCaseFilter === '' || 
+                
+                // 1. 타입 필터링 (official, slang, all)
+                const isTypeMatch = typeFilter === 'all' || item.type === typeFilter;
+                
+                // 2. 검색 텍스트 필터링
+                const isTextMatch = lowerCaseFilter === '' || 
                     termLower.includes(lowerCaseFilter) ||
                     definitionLower.includes(lowerCaseFilter) ||
-                    categoryLower.includes(lowerCaseFilter)) {
-                    
+                    categoryLower.includes(lowerCaseFilter);
+
+                // 최종 렌더링 결정
+                if (isTypeMatch && isTextMatch) {
                     const card = createTermCard(item);
                     glossaryList.appendChild(card);
                     hasResults = true;
@@ -491,12 +555,28 @@
 
         // 이벤트 리스너: 검색창 입력
         searchInput.addEventListener('input', (e) => {
-            renderGlossary(e.target.value);
+            // 검색 시에는 현재 타입 필터를 유지
+            renderGlossary(e.target.value, currentFilter);
         });
+        
+        // 이벤트 리스너: 필터 버튼 클릭
+        filterButtonsContainer.addEventListener('click', (e) => {
+            // 가장 가까운 .filter-btn 요소를 찾습니다.
+            const button = e.target.closest('.filter-btn');
+            if (!button) return;
+
+            const newFilter = button.id === 'filter-all' ? 'all' : button.dataset.filter;
+            currentFilter = newFilter; // 현재 필터 상태 저장
+            
+            // 필터 변경 시 검색창 내용은 유지하고 렌더링
+            renderGlossary(searchInput.value, currentFilter); 
+        });
+
 
         // 초기 렌더링
         window.onload = () => {
-            renderGlossary();
+            // 처음 로드 시 '전체 보기' 필터 상태로 렌더링
+            renderGlossary(searchInput.value, currentFilter);
         };
 
     </script>
