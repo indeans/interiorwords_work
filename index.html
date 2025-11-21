@@ -48,6 +48,17 @@
         .filter-btn {
             @apply px-6 py-2 rounded-full font-semibold transition duration-150 border cursor-pointer;
         }
+
+        /* 활성 버튼 색상 오버라이드 (요청에 따른 디자인 개선) */
+        .filter-btn-active-all {
+            @apply bg-indigo-600 text-white shadow-lg border-transparent hover:bg-indigo-700;
+        }
+        .filter-btn-active-official {
+            @apply bg-blue-600 text-white shadow-lg border-transparent hover:bg-blue-700;
+        }
+        .filter-btn-active-slang {
+            @apply bg-amber-600 text-white shadow-lg border-transparent hover:bg-amber-700;
+        }
     </style>
 </head>
 <body class="p-4 sm:p-8">
@@ -438,32 +449,36 @@
 
         let currentFilter = 'all'; // 'all', 'official', 'slang'
 
-        // 함수: 활성 필터 버튼 스타일 업데이트 (디자인 개선)
+        // 함수: 활성 필터 버튼 스타일 업데이트 (개선된 디자인 적용)
         function updateFilterButtons(activeFilter) {
             const allButtons = [allBtn, officialBtn, slangBtn];
             
             allButtons.forEach(btn => {
-                const isActive = (btn.id === 'filter-all' && activeFilter === 'all') || 
-                                 (btn.dataset.filter === activeFilter);
+                const isAll = btn.id === 'filter-all';
+                const isOfficial = btn.id === 'filter-official';
+                const isSlang = btn.id === 'filter-slang';
                 
                 // Reset to base class
                 btn.className = 'filter-btn';
                 
-                if (isActive) {
-                    // Active (Indigo theme, prominent shadow) Style
-                    btn.classList.add('bg-indigo-600', 'text-white', 'shadow-lg', 'border-transparent', 'hover:bg-indigo-700');
+                if ((isAll && activeFilter === 'all') || (isOfficial && activeFilter === 'official') || (isSlang && activeFilter === 'slang')) {
+                    // Active Style: Color filled background, white text
+                    if (isAll) {
+                        btn.classList.add('filter-btn-active-all');
+                    } else if (isOfficial) {
+                        btn.classList.add('filter-btn-active-official');
+                    } else if (isSlang) {
+                        btn.classList.add('filter-btn-active-slang');
+                    }
                 } else {
-                    // Inactive (White background, subtle shadow) Style
+                    // Inactive Style: White background, colored border/text
                     btn.classList.add('bg-white', 'shadow-sm');
 
-                    if (btn.id === 'filter-all') {
-                        // All button inactive (Gray style)
+                    if (isAll) {
                         btn.classList.add('text-gray-600', 'border-gray-300', 'hover:bg-gray-50');
-                    } else if (btn.id === 'filter-official') {
-                        // Official button inactive (Blue style)
+                    } else if (isOfficial) {
                         btn.classList.add('border-blue-500', 'text-blue-600', 'hover:bg-blue-50');
-                    } else if (btn.id === 'filter-slang') {
-                        // Slang button inactive (Amber style)
+                    } else if (isSlang) {
                         btn.classList.add('border-amber-500', 'text-amber-600', 'hover:bg-amber-50');
                     }
                 }
